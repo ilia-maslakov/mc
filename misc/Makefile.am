@@ -28,7 +28,8 @@ LIBFILES_CONST = \
 	filehighlight.ini \
 	mc.default.keymap \
 	mc.emacs.keymap \
-	mc.vim.keymap
+	mc.vim.keymap \
+	spell.keymap
 
 
 LIBFILES_SCRIPT = \
