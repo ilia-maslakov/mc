@@ -29,11 +29,11 @@ typedef enum
 typedef enum
 {
     MC_PPF_NONE = 0,
-    MC_PPF_NAVIGATE = 1 << 0,      /* handles chdir/".." */
-    MC_PPF_GET_FILES = 1 << 1,     /* can extract files */
-    MC_PPF_DELETE = 1 << 2,        /* can delete items */
+    MC_PPF_NAVIGATE = 1 << 0,  /* handles chdir/".." */
+    MC_PPF_GET_FILES = 1 << 1, /* can extract files */
+    MC_PPF_DELETE = 1 << 2,    /* can delete items */
     MC_PPF_CUSTOM_TITLE = 1 << 3,
-    MC_PPF_CREATE = 1 << 4          /* supports Shift+F4 (create item) */
+    MC_PPF_CREATE = 1 << 4 /* supports Shift+F4 (create item) */
 } mc_pp_flags_t;
 
 /*** structures declarations (and typedefs of structures)*****************************************/
@@ -53,11 +53,11 @@ typedef struct mc_panel_host_t
 /* What the plugin provides (callback table) */
 typedef struct mc_panel_plugin_t
 {
-    int api_version;        /* MC_PANEL_PLUGIN_API_VERSION */
-    const char *name;       /* "docker", "git-log" */
+    int api_version;          /* MC_PANEL_PLUGIN_API_VERSION */
+    const char *name;         /* "docker", "git-log" */
     const char *display_name; /* "Docker containers" */
-    const char *proto;      /* protocol prefix for panel title, e.g. "HelloWorld" → "HelloWorld:/path" */
-    const char *prefix;     /* "docker:" or NULL */
+    const char *proto; /* protocol prefix for panel title, e.g. "HelloWorld" → "HelloWorld:/path" */
+    const char *prefix; /* "docker:" or NULL */
     mc_pp_flags_t flags;
 
     /* Required */

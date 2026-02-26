@@ -52,6 +52,7 @@
 #include "lib/mcconfig.h"
 #include "lib/event.h"  // mc_event_raise()
 #include "lib/charsets.h"
+#include "lib/editor-plugin.h"
 
 #include "src/keymap.h"           // keybind_lookup_keymap_command()
 #include "src/setup.h"            // home_dir
@@ -62,9 +63,6 @@
 #include "edit-impl.h"
 #include "editwidget.h"
 #include "editmacros.h"  // edit_execute_macro()
-#ifdef HAVE_ASPELL
-#include "spell.h"
-#endif
 
 /*** global variables ****************************************************************************/
 
@@ -80,6 +78,18 @@ char *edit_fold_close_char = NULL;
 
 /*** file scope type declarations ****************************************************************/
 
+typedef struct
+{
+    const mc_editor_plugin_t *plugin;
+    void *plugin_data;
+} editor_plugin_instance_t;
+
+typedef struct
+{
+    mc_editor_host_t *host;
+    GPtrArray *instances; /* editor_plugin_instance_t* */
+} editor_plugin_ctx_t;
+
 /*** forward declarations (file scope functions) *************************************************/
 
 /*** file scope variables ************************************************************************/
@@ -88,6 +98,270 @@ static unsigned int edit_dlg_init_refcounter = 0;
 
 /* --------------------------------------------------------------------------------------------- */
 /*** file scope functions ************************************************************************/
+/* --------------------------------------------------------------------------------------------- */
+/**
+ * Host callback: request redraw/refresh.
+ */
+
+static void
+editor_host_refresh_impl (mc_editor_host_t *host)
+{
+    if (host != NULL && host->host_data != NULL)
+        widget_draw (WIDGET (host->host_data));
+}
+
+/* --------------------------------------------------------------------------------------------- */
+/**
+ * Host callback: show message box.
+ */
+
+static void
+editor_host_message_impl (mc_editor_host_t *host, int flags, const char *title, const char *text)
+{
+    (void) host;
+    message (flags, title, "%s", text != NULL ? text : "");
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+static void
+editor_plugin_instance_free (gpointer data)
+{
+    editor_plugin_instance_t *inst = (editor_plugin_instance_t *) data;
+
+    if (inst != NULL)
+    {
+        if (inst->plugin != NULL && inst->plugin->close != NULL && inst->plugin_data != NULL)
+            inst->plugin->close (inst->plugin_data);
+        g_free (inst);
+    }
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+static editor_plugin_ctx_t *
+editor_plugin_ctx_create (WDialog *edit_dlg)
+{
+    const GSList *plugins;
+    editor_plugin_ctx_t *ctx;
+
+    if (edit_dlg == NULL)
+        return NULL;
+
+    plugins = mc_editor_plugin_list ();
+    if (plugins == NULL)
+        return NULL;
+
+    ctx = g_new0 (editor_plugin_ctx_t, 1);
+    ctx->host = g_new0 (mc_editor_host_t, 1);
+    ctx->host->refresh = editor_host_refresh_impl;
+    ctx->host->message = editor_host_message_impl;
+    ctx->host->host_data = edit_dlg;
+    ctx->instances = g_ptr_array_new_with_free_func (editor_plugin_instance_free);
+
+    for (; plugins != NULL; plugins = g_slist_next (plugins))
+    {
+        const mc_editor_plugin_t *plugin = (const mc_editor_plugin_t *) plugins->data;
+        editor_plugin_instance_t *inst;
+
+        inst = g_new0 (editor_plugin_instance_t, 1);
+        inst->plugin = plugin;
+        inst->plugin_data = plugin->open (ctx->host, edit_dlg);
+        if (inst->plugin_data == NULL)
+        {
+            g_free (inst);
+            continue;
+        }
+
+        g_ptr_array_add (ctx->instances, inst);
+    }
+
+    if (ctx->instances->len == 0)
+    {
+        g_ptr_array_free (ctx->instances, TRUE);
+        g_free (ctx->host);
+        g_free (ctx);
+        return NULL;
+    }
+
+    return ctx;
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+static void
+editor_plugin_ctx_destroy (WDialog *edit_dlg)
+{
+    editor_plugin_ctx_t *ctx;
+
+    if (edit_dlg == NULL)
+        return;
+
+    ctx = (editor_plugin_ctx_t *) edit_dlg->data.p;
+    if (ctx == NULL)
+        return;
+
+    g_ptr_array_free (ctx->instances, TRUE);
+    g_free (ctx->host);
+    g_free (ctx);
+    edit_dlg->data.p = NULL;
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+gboolean
+edit_plugin_handle_action (WDialog *edit_dlg, long command, WEdit *edit)
+{
+    editor_plugin_ctx_t *ctx;
+    gsize plugin_idx = 0;
+    const GSList *plugins = NULL;
+    const mc_editor_plugin_t *plugin = NULL;
+    guint i;
+
+    if (edit_dlg == NULL)
+        return FALSE;
+
+    ctx = (editor_plugin_ctx_t *) edit_dlg->data.p;
+    if (ctx == NULL)
+        return FALSE;
+
+    if (edit == NULL && GROUP (edit_dlg)->current != NULL
+        && edit_widget_is_editor (CONST_WIDGET (GROUP (edit_dlg)->current->data)))
+        edit = EDIT (GROUP (edit_dlg)->current->data);
+
+    if (command >= MC_EDITOR_PLUGIN_CMD_BASE)
+    {
+        plugin_idx = (gsize) (command - MC_EDITOR_PLUGIN_CMD_BASE);
+        plugins = mc_editor_plugin_list ();
+        for (; plugins != NULL && plugin_idx > 0; plugins = g_slist_next (plugins), plugin_idx--)
+            ;
+        plugin = (plugins != NULL) ? (const mc_editor_plugin_t *) plugins->data : NULL;
+        if (plugin == NULL)
+            return FALSE;
+    }
+
+    for (i = 0; i < ctx->instances->len; i++)
+    {
+        editor_plugin_instance_t *inst =
+            (editor_plugin_instance_t *) g_ptr_array_index (ctx->instances, i);
+
+        if (plugin != NULL)
+        {
+            if (inst->plugin != plugin)
+                continue;
+
+            if (plugin->query_state != NULL)
+            {
+                mc_ep_state_t state = { TRUE, TRUE, NULL };
+                if (plugin->query_state (inst->plugin_data, edit, &state) == MC_EPR_OK
+                    && (!state.available || !state.enabled))
+                {
+                    if (state.reason != NULL && *state.reason != '\0')
+                        message (D_NORMAL, _ ("Plugin"), "%s", state.reason);
+                    return FALSE;
+                }
+            }
+
+            if (plugin->activate != NULL)
+                return (plugin->activate (inst->plugin_data, edit) == MC_EPR_OK);
+            if (plugin->handle_action != NULL)
+                return (plugin->handle_action (inst->plugin_data, command, edit) == MC_EPR_OK);
+            return FALSE;
+        }
+        else if (inst->plugin != NULL && inst->plugin->handle_action != NULL
+                 && inst->plugin->handle_action (inst->plugin_data, command, edit) == MC_EPR_OK)
+        {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+gboolean
+edit_plugin_configure (WDialog *edit_dlg, long command, WEdit *edit)
+{
+    editor_plugin_ctx_t *ctx;
+    gsize plugin_idx = 0;
+    const GSList *plugins = NULL;
+    const mc_editor_plugin_t *plugin = NULL;
+    guint i;
+
+    if (edit_dlg == NULL)
+        return FALSE;
+
+    ctx = (editor_plugin_ctx_t *) edit_dlg->data.p;
+    if (ctx == NULL)
+        return FALSE;
+
+    if (command < MC_EDITOR_PLUGIN_CMD_BASE)
+        return FALSE;
+
+    plugin_idx = (gsize) (command - MC_EDITOR_PLUGIN_CMD_BASE);
+    plugins = mc_editor_plugin_list ();
+    for (; plugins != NULL && plugin_idx > 0; plugins = g_slist_next (plugins), plugin_idx--)
+        ;
+    plugin = (plugins != NULL) ? (const mc_editor_plugin_t *) plugins->data : NULL;
+    if (plugin == NULL || plugin->configure == NULL)
+        return FALSE;
+
+    for (i = 0; i < ctx->instances->len; i++)
+    {
+        editor_plugin_instance_t *inst =
+            (editor_plugin_instance_t *) g_ptr_array_index (ctx->instances, i);
+
+        if (inst->plugin == plugin)
+            return (plugin->configure (inst->plugin_data, edit) == MC_EPR_OK);
+    }
+
+    return FALSE;
+}
+
+/* --------------------------------------------------------------------------------------------- */
+gboolean
+edit_plugin_handle_key (WDialog *edit_dlg, int key, WEdit *edit)
+{
+    editor_plugin_ctx_t *ctx;
+    guint i;
+
+    if (edit_dlg == NULL)
+        return FALSE;
+
+    ctx = (editor_plugin_ctx_t *) edit_dlg->data.p;
+    if (ctx == NULL)
+        return FALSE;
+
+    if (edit == NULL && GROUP (edit_dlg)->current != NULL
+        && edit_widget_is_editor (CONST_WIDGET (GROUP (edit_dlg)->current->data)))
+        edit = EDIT (GROUP (edit_dlg)->current->data);
+
+    for (i = 0; i < ctx->instances->len; i++)
+    {
+        editor_plugin_instance_t *inst =
+            (editor_plugin_instance_t *) g_ptr_array_index (ctx->instances, i);
+        const mc_editor_plugin_t *plugin = inst->plugin;
+
+        if (plugin == NULL || plugin->handle_key == NULL)
+            continue;
+
+        if (plugin->query_state != NULL)
+        {
+            mc_ep_state_t state = { TRUE, TRUE, NULL };
+
+            if (plugin->query_state (inst->plugin_data, edit, &state) == MC_EPR_OK
+                && (!state.available || !state.enabled))
+                continue;
+        }
+
+        if (plugin->handle_key (inst->plugin_data, key, edit) == MC_EPR_OK)
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
 /* --------------------------------------------------------------------------------------------- */
 /**
  * Init the 'edit' subsystem
@@ -104,10 +378,6 @@ edit_dlg_init (void)
         edit_window_close_char = mc_skin_get ("widget-editor", "window-close-char", "X");
         edit_fold_open_char = mc_skin_get ("widget-editor", "fold-open-char", "v");
         edit_fold_close_char = mc_skin_get ("widget-editor", "fold-close-char", ">");
-
-#ifdef HAVE_ASPELL
-        aspell_init ();
-#endif
     }
 }
 
@@ -125,10 +395,6 @@ edit_dlg_deinit (void)
         g_free (edit_window_close_char);
         g_free (edit_fold_open_char);
         g_free (edit_fold_close_char);
-
-#ifdef HAVE_ASPELL
-        aspell_clean ();
-#endif
     }
 
     if (edit_dlg_init_refcounter != 0)
@@ -182,6 +448,78 @@ edit_about (void)
     g_free (version);
     g_free (package_copyright);
     g_free (description);
+}
+
+/* --------------------------------------------------------------------------------------------- */
+/**
+ * Show info about loaded editor plugins.
+ */
+
+static void
+edit_plugins_info (WDialog *h)
+{
+    const GSList *plugins;
+    Listbox *listbox;
+    WEdit *edit = NULL;
+    int lines, cols;
+    int selected;
+    long selected_command = CK_IgnoreKey;
+
+    plugins = mc_editor_plugin_list ();
+    if (plugins == NULL)
+    {
+        message (D_NORMAL, _ ("Plugin info"), "%s", _ ("No editor plugins are loaded."));
+        return;
+    }
+
+    lines = MIN ((int) g_slist_length ((GSList *) plugins) + 2, LINES * 2 / 3);
+    cols = COLS * 3 / 4;
+    listbox = listbox_window_new (lines, cols, _ ("Plugin info"), "[Plugin info]");
+
+    if (h != NULL)
+    {
+        WGroup *g = GROUP (h);
+
+        if (g != NULL && g->current != NULL && g->current->data != NULL
+            && edit_widget_is_editor (CONST_WIDGET (g->current->data)))
+            edit = EDIT (g->current->data);
+    }
+
+    if (edit == NULL && h != NULL)
+        edit = edit_find_editor (h);
+
+    for (; plugins != NULL; plugins = g_slist_next (plugins))
+    {
+        const mc_editor_plugin_t *p = (const mc_editor_plugin_t *) plugins->data;
+        const char *activate = (p->activate != NULL) ? "yes" : "no";
+        const char *configure = (p->configure != NULL) ? "yes" : "no";
+        const char *state = (p->query_state != NULL) ? "yes" : "no";
+        const char *action = (p->handle_action != NULL) ? "yes" : "no";
+        const char *key = (p->handle_key != NULL) ? "yes" : "no";
+        const char *event = (p->handle_event != NULL) ? "yes" : "no";
+        const char *open = (p->open != NULL) ? "yes" : "no";
+        const char *close = (p->close != NULL) ? "yes" : "no";
+        char *line;
+
+        line = g_strdup_printf (
+            "%s (%s): api=%d flags=0x%x callbacks: activate=%s configure=%s query=%s action=%s "
+            "key=%s event=%s open=%s close=%s",
+            p->display_name != NULL ? p->display_name : "-", p->name != NULL ? p->name : "-",
+            p->api_version, (unsigned int) p->flags, activate, configure, state, action, key, event,
+            open, close);
+        listbox_add_item (listbox->list, LISTBOX_APPEND_AT_END, 0, line, NULL, FALSE);
+        g_free (line);
+    }
+
+    selected = listbox_run (listbox);
+    if (selected >= 0)
+    {
+        selected_command = MC_EDITOR_PLUGIN_CMD_BASE + selected;
+
+        if (!edit_plugin_configure (h, selected_command, edit))
+            message (D_NORMAL, _ ("Plugin info"), "%s",
+                     _ ("Selected plugin has no configuration callback."));
+    }
 }
 
 /* --------------------------------------------------------------------------------------------- */
@@ -410,6 +748,9 @@ edit_dialog_command_execute (WDialog *h, long command)
     WGroup *g = GROUP (h);
     cb_ret_t ret = MSG_HANDLED;
 
+    if (edit_plugin_handle_action (h, command, NULL))
+        return MSG_HANDLED;
+
     switch (command)
     {
     case CK_EditNew:
@@ -491,6 +832,9 @@ edit_dialog_command_execute (WDialog *h, long command)
         break;
     case CK_Options:
         edit_options_dialog (h);
+        break;
+    case CK_EditPluginsInfo:
+        edit_plugins_info (h);
         break;
     case CK_OptionsSaveMode:
         edit_save_mode_cmd ();
@@ -895,6 +1239,7 @@ edit_dialog_callback (Widget *w, Widget *sender, widget_msg_t msg, int parm, voi
         return MSG_HANDLED;
 
     case MSG_DESTROY:
+        editor_plugin_ctx_destroy (h);
         edit_dlg_deinit ();
         return MSG_HANDLED;
 
@@ -1017,6 +1362,11 @@ edit_callback (Widget *w, Widget *sender, widget_msg_t msg, int parm, void *data
 
         // The user may override the access-keys for the menu bar.
         if (macro_index == -1 && !bracketed_pasting_in_progress && edit_execute_macro (e, parm))
+        {
+            edit_update_screen (e);
+            ret = MSG_HANDLED;
+        }
+        else if (edit_plugin_handle_key (DIALOG (w->owner), parm, e))
         {
             edit_update_screen (e);
             ret = MSG_HANDLED;
@@ -1396,6 +1746,9 @@ edit_files (const GList *files)
     edit_dlg->get_shortcut = edit_get_shortcut;
     edit_dlg->get_title = edit_get_title;
 
+    edit_register_builtin_plugins ();
+    mc_editor_plugins_load ();
+
     g = GROUP (edit_dlg);
 
     edit_dlg->bg = WIDGET (background_new (1, 0, wd->rect.lines - 2, wd->rect.cols,
@@ -1409,6 +1762,8 @@ edit_files (const GList *files)
 
     w = WIDGET (buttonbar_new ());
     group_add_widget_autopos (g, w, w->pos_flags, NULL);
+
+    edit_dlg->data.p = editor_plugin_ctx_create (edit_dlg);
 
     for (file = files; file != NULL; file = g_list_next (file))
     {

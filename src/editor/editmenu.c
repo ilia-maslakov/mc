@@ -43,6 +43,7 @@
 
 #include "lib/global.h"
 
+#include "lib/editor-plugin.h"
 #include "lib/tty/key.h"  // ALT
 #include "lib/widget.h"
 
@@ -172,19 +173,6 @@ create_command_menu (void)
     entries = g_list_prepend (entries, menu_entry_new (_ ("Delete macr&o..."), CK_MacroDelete));
     entries = g_list_prepend (
         entries, menu_entry_new (_ ("Record/Repeat &actions"), CK_RepeatStartStopRecord));
-    entries = g_list_prepend (entries, menu_separator_new ());
-#ifdef HAVE_ASPELL
-    if (strcmp (spell_language, "NONE") != 0)
-    {
-        entries = g_list_prepend (entries, menu_entry_new (_ ("S&pell check"), CK_SpellCheck));
-        entries =
-            g_list_prepend (entries, menu_entry_new (_ ("C&heck word"), CK_SpellCheckCurrentWord));
-        entries = g_list_prepend (
-            entries, menu_entry_new (_ ("Change spelling &language..."), CK_SpellCheckSelectLang));
-        entries = g_list_prepend (entries, menu_separator_new ());
-    }
-#endif
-    entries = g_list_prepend (entries, menu_entry_new (_ ("&Mail..."), CK_EditMail));
 
     return g_list_reverse (entries);
 }
@@ -245,10 +233,44 @@ create_options_menu (void)
     entries =
         g_list_prepend (entries, menu_entry_new (_ ("Syntax &highlighting..."), CK_SyntaxChoose));
     entries = g_list_prepend (entries, menu_separator_new ());
+    entries = g_list_prepend (entries, menu_entry_new (_ ("Pl&ugin info..."), CK_EditPluginsInfo));
+    entries = g_list_prepend (entries, menu_separator_new ());
     entries = g_list_prepend (entries, menu_entry_new (_ ("S&yntax file"), CK_EditSyntaxFile));
     entries = g_list_prepend (entries, menu_entry_new (_ ("&Menu file"), CK_EditUserMenu));
     entries = g_list_prepend (entries, menu_separator_new ());
     entries = g_list_prepend (entries, menu_entry_new (_ ("&Save setup"), CK_SaveSetup));
+
+    return g_list_reverse (entries);
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+static GList *
+create_plugins_menu (void)
+{
+    const GSList *plugins;
+    GList *entries = NULL;
+    long command_id = MC_EDITOR_PLUGIN_CMD_BASE;
+
+    for (plugins = mc_editor_plugin_list (); plugins != NULL; plugins = g_slist_next (plugins))
+    {
+        const mc_editor_plugin_t *plugin = (const mc_editor_plugin_t *) plugins->data;
+        const char *label;
+
+        if (plugin->activate == NULL || (plugin->flags & MC_EPF_HAS_MENU) == 0)
+        {
+            command_id++;
+            continue;
+        }
+
+        label = plugin->display_name != NULL ? plugin->display_name : plugin->name;
+        entries = g_list_prepend (entries, menu_entry_new (label, command_id));
+        command_id++;
+    }
+
+    if (entries == NULL)
+        entries =
+            g_list_prepend (entries, menu_entry_new (_ ("(no plugins loaded)"), CK_IgnoreKey));
 
     return g_list_reverse (entries);
 }
@@ -283,6 +305,8 @@ edit_init_menu (WMenuBar *menubar)
                       menu_new (_ ("For&mat"), create_format_menu (), "[Internal File Editor]"));
     menubar_add_menu (menubar,
                       menu_new (_ ("&Window"), create_window_menu (), "[Internal File Editor]"));
+    menubar_add_menu (menubar,
+                      menu_new (_ ("Pl&ugins"), create_plugins_menu (), "[Internal File Editor]"));
     menubar_add_menu (menubar,
                       menu_new (_ ("&Options"), create_options_menu (), "[Internal File Editor]"));
 }
@@ -321,8 +345,11 @@ edit_drop_hotkey_menu (WDialog *h, int key)
     case ALT ('w'):
         m = 5;
         break;
-    case ALT ('o'):
+    case ALT ('p'):
         m = 6;
+        break;
+    case ALT ('o'):
+        m = 7;
         break;
     default:
         return FALSE;

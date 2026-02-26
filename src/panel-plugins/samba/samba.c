@@ -45,10 +45,10 @@
 /* A saved connection bookmark */
 typedef struct
 {
-    char *label;                /* display name (ini group key) */
+    char *label; /* display name (ini group key) */
     char *server;
-    char *share;                /* default share/path, may be empty */
-    char *username;             /* may include DOMAIN\user */
+    char *share;    /* default share/path, may be empty */
+    char *username; /* may include DOMAIN\user */
     char *password;
     char *workgroup;
 } smb_connection_t;
@@ -57,7 +57,7 @@ typedef struct
 typedef struct
 {
     char *name;
-    unsigned int smbc_type;     /* SMBC_FILE_SHARE, SMBC_DIR, SMBC_FILE, etc. */
+    unsigned int smbc_type; /* SMBC_FILE_SHARE, SMBC_DIR, SMBC_FILE, etc. */
     struct stat st;
 } smb_entry_t;
 
@@ -67,13 +67,13 @@ typedef struct
     SMBCCTX *ctx;
 
     /* Navigation state */
-    gboolean at_root;           /* TRUE = showing saved connections list */
-    char *current_url;          /* "smb://SERVER/SHARE/path" when not at root */
-    GPtrArray *entries;         /* smb_entry_t* when browsing; NULL at root */
+    gboolean at_root;   /* TRUE = showing saved connections list */
+    char *current_url;  /* "smb://SERVER/SHARE/path" when not at root */
+    GPtrArray *entries; /* smb_entry_t* when browsing; NULL at root */
 
     /* Saved connections */
-    GPtrArray *connections;     /* smb_connection_t* — loaded from ini */
-    char *connections_file;     /* path to ini file */
+    GPtrArray *connections; /* smb_connection_t* — loaded from ini */
+    char *connections_file; /* path to ini file */
 
     /* Active connection credentials (for auth callback) */
     char *auth_username;
@@ -291,8 +291,8 @@ find_connection (const samba_data_t *data, const char *label)
 /* --------------------------------------------------------------------------------------------- */
 
 static void
-smb_auth_cb (SMBCCTX *ctx, const char *server, const char *share,
-             char *wg, int wg_len, char *un, int un_len, char *pw, int pw_len)
+smb_auth_cb (SMBCCTX *ctx, const char *server, const char *share, char *wg, int wg_len, char *un,
+             int un_len, char *pw, int pw_len)
 {
     samba_data_t *data;
 
@@ -319,7 +319,7 @@ smb_is_inside_share (const char *url)
     const char *p;
     int slash_count = 0;
 
-    p = url + 6;                /* skip "smb://" */
+    p = url + 6; /* skip "smb://" */
     while (*p != '\0')
     {
         if (*p == '/')
@@ -400,7 +400,7 @@ smb_url_up (const char *url)
     const char *after_scheme;
     const char *last_slash;
 
-    after_scheme = url + 6;     /* past "smb://" */
+    after_scheme = url + 6; /* past "smb://" */
 
     if (*after_scheme == '\0')
         return NULL;
@@ -417,8 +417,8 @@ smb_url_up (const char *url)
 static gboolean
 smb_entry_is_dir (unsigned int smbc_type)
 {
-    return (smbc_type == SMBC_WORKGROUP || smbc_type == SMBC_SERVER
-            || smbc_type == SMBC_FILE_SHARE || smbc_type == SMBC_DIR);
+    return (smbc_type == SMBC_WORKGROUP || smbc_type == SMBC_SERVER || smbc_type == SMBC_FILE_SHARE
+            || smbc_type == SMBC_DIR);
 }
 
 /* --------------------------------------------------------------------------------------------- */
@@ -484,8 +484,7 @@ enter_connection (samba_data_t *data, const smb_connection_t *conn)
 /* --------------------------------------------------------------------------------------------- */
 
 static gboolean
-show_connection_dialog (char **label, char **server, char **share,
-                        char **username, char **password)
+show_connection_dialog (char **label, char **server, char **share, char **username, char **password)
 {
     /* clang-format off */
     quick_widget_t quick_widgets[] = {
@@ -517,7 +516,7 @@ show_connection_dialog (char **label, char **server, char **share,
 
     quick_dialog_t qdlg = {
         .rect = r,
-        .title = N_("SMB Connection"),
+        .title = N_ ("SMB Connection"),
         .help = "[Samba Plugin]",
         .widgets = quick_widgets,
         .callback = NULL,
@@ -664,7 +663,7 @@ samba_chdir (void *plugin_data, const char *path)
     if (strcmp (path, "..") == 0)
     {
         if (data->at_root)
-            return MC_PPR_NOT_SUPPORTED;        /* close plugin */
+            return MC_PPR_NOT_SUPPORTED; /* close plugin */
 
         /* Are we at the connection's base URL (smb://SERVER or smb://SERVER/SHARE)? */
         {

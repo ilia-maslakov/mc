@@ -33,6 +33,7 @@
 #include <stdio.h>
 
 #include "lib/global.h"
+#include "lib/editor-plugin.h"
 #include "lib/panel-plugin.h"
 
 #ifdef HAVE_GMODULE
@@ -48,9 +49,21 @@
 /*** file scope variables ************************************************************************/
 
 static GPtrArray *panel_plugin_modules = NULL;
+static gboolean editor_plugins_loaded = FALSE;
+static GPtrArray *editor_plugin_modules = NULL;
 
 /*** file scope functions ************************************************************************/
 /* --------------------------------------------------------------------------------------------- */
+
+static gboolean
+module_filename_has_native_suffix (const gchar *filename)
+{
+    if (filename == NULL)
+        return FALSE;
+
+    return g_str_has_suffix (filename, ".so") || g_str_has_suffix (filename, ".dylib")
+        || g_str_has_suffix (filename, ".bundle") || g_str_has_suffix (filename, ".dll");
+}
 
 /* --------------------------------------------------------------------------------------------- */
 /*** public functions ****************************************************************************/
@@ -68,7 +81,7 @@ mc_panel_plugins_load (void)
     if (dir == NULL)
     {
         g_free (plugins_dir);
-        return; // no plugins dir — OK, nothing to load
+        return;  // no plugins dir — OK, nothing to load
     }
 
     panel_plugin_modules = g_ptr_array_new ();
@@ -80,7 +93,7 @@ mc_panel_plugins_load (void)
         const mc_panel_plugin_t *plugin;
         gchar *path;
 
-        if (!g_str_has_suffix (filename, "." G_MODULE_SUFFIX))
+        if (!module_filename_has_native_suffix (filename))
             continue;
 
         path = g_build_filename (plugins_dir, filename, (char *) NULL);
@@ -110,8 +123,77 @@ mc_panel_plugins_load (void)
             continue;
         }
 
-        g_module_make_resident (module); // prevent unload — plugin descriptor lives in .so
+        g_module_make_resident (module);  // prevent unload — plugin descriptor lives in .so
         g_ptr_array_add (panel_plugin_modules, module);
+        g_free (path);
+    }
+
+    g_dir_close (dir);
+    g_free (plugins_dir);
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+void
+mc_editor_plugins_load (void)
+{
+    GDir *dir;
+    const gchar *filename;
+    gchar *plugins_dir;
+
+    if (editor_plugins_loaded)
+        return;
+
+    editor_plugins_loaded = TRUE;
+    plugins_dir = g_build_filename (MC_EDITOR_PLUGINS_DIR, (char *) NULL);
+    dir = g_dir_open (plugins_dir, 0, NULL);
+    if (dir == NULL)
+    {
+        g_free (plugins_dir);
+        return;
+    }
+
+    editor_plugin_modules = g_ptr_array_new ();
+
+    while ((filename = g_dir_read_name (dir)) != NULL)
+    {
+        GModule *module;
+        mc_editor_plugin_register_fn register_fn;
+        const mc_editor_plugin_t *plugin;
+        gchar *path;
+
+        if (!module_filename_has_native_suffix (filename))
+            continue;
+
+        path = g_build_filename (plugins_dir, filename, (char *) NULL);
+        module = g_module_open (path, G_MODULE_BIND_LAZY);
+        if (module == NULL)
+        {
+            fprintf (stderr, "Editor plugin %s: %s\n", filename, g_module_error ());
+            g_free (path);
+            continue;
+        }
+
+        if (!g_module_symbol (module, MC_EDITOR_PLUGIN_ENTRY, (gpointer *) &register_fn))
+        {
+            fprintf (stderr, "Editor plugin %s: symbol %s not found\n", filename,
+                     MC_EDITOR_PLUGIN_ENTRY);
+            g_module_close (module);
+            g_free (path);
+            continue;
+        }
+
+        plugin = register_fn ();
+        if (plugin == NULL || !mc_editor_plugin_add (plugin))
+        {
+            fprintf (stderr, "Editor plugin %s: registration failed\n", filename);
+            g_module_close (module);
+            g_free (path);
+            continue;
+        }
+
+        g_module_make_resident (module);
+        g_ptr_array_add (editor_plugin_modules, module);
         g_free (path);
     }
 
@@ -127,6 +209,14 @@ void
 mc_panel_plugins_load (void)
 {
     // GModule not available — dynamic panel plugins disabled
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+void
+mc_editor_plugins_load (void)
+{
+    /* GModule not available - dynamic editor plugins disabled */
 }
 
 /* --------------------------------------------------------------------------------------------- */

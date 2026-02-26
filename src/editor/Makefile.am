@@ -20,15 +20,11 @@ libedit_la_SOURCES = \
 	editoptions.c \
 	editsearch.c editsearch.h \
 	editwidget.c editwidget.h \
-	etags.c etags.h \
+	../editor-plugins/etags/etags.c \
+	../editor-plugins/etags/etags.h \
+	../editor-plugins/spell/spell.c \
+	../editor-plugins/spell/spell.h \
 	format.c \
 	syntax.c
-
-if USE_ASPELL
-if HAVE_GMODULE
-libedit_la_SOURCES += \
-	spell.c spell.h
-endif
-endif
 
 AM_CPPFLAGS = $(GLIB_CFLAGS) -I$(top_srcdir)

@@ -484,6 +484,13 @@ AC_ARG_WITH([panel-plugins-dir],
     [panel_plugins_dir='${libdir}/mc/panel-plugins'])
 AC_SUBST([panel_plugins_dir])
 
+AC_ARG_WITH([editor-plugins-dir],
+    AS_HELP_STRING([--with-editor-plugins-dir=DIR],
+        [Directory for dynamic editor plugins [LIBDIR/mc/editor-plugins]]),
+    [editor_plugins_dir="$withval"],
+    [editor_plugins_dir='${libdir}/mc/editor-plugins'])
+AC_SUBST([editor_plugins_dir])
+
 dnl ############################################################################
 dnl Directories
 dnl ############################################################################

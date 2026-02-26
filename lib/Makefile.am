@@ -15,6 +15,7 @@ endif
 
 SUBLIB_includes = \
 	event.h event-types.h \
+	editor-plugin.h \
 	filehighlight.h \
 	idx.h \
 	intprops-internal.h \
@@ -60,6 +61,7 @@ EXTRA_DIST = \
 	stdckdint.in.h
 
 AM_CPPFLAGS = $(GLIB_CFLAGS) -I$(top_srcdir) \
+	-DMC_EDITOR_PLUGINS_DIR=\""$(editor_plugins_dir)"\" \
 	-DMC_PANEL_PLUGINS_DIR=\""$(panel_plugins_dir)"\"
 
 libmc_la_LIBADD = \

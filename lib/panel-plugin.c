@@ -34,6 +34,7 @@
 #include <string.h>
 
 #include "lib/global.h"
+#include "lib/editor-plugin.h"
 #include "lib/panel-plugin.h"
 
 /*** global variables ****************************************************************************/
@@ -45,6 +46,7 @@
 /*** file scope variables ************************************************************************/
 
 static GSList *panel_plugin_registry = NULL;
+static GSList *editor_plugin_registry = NULL;
 
 /*** file scope functions ************************************************************************/
 /* --------------------------------------------------------------------------------------------- */
@@ -143,6 +145,77 @@ mc_panel_plugins_shutdown (void)
 {
     g_slist_free (panel_plugin_registry);
     panel_plugin_registry = NULL;
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+gboolean
+mc_editor_plugin_add (const mc_editor_plugin_t *plugin)
+{
+    if (plugin == NULL)
+        return FALSE;
+
+    if (plugin->api_version != MC_EDITOR_PLUGIN_API_VERSION)
+    {
+        fprintf (stderr, "Editor plugin \"%s\": API version %d, expected %d\n",
+                 plugin->name != NULL ? plugin->name : "(null)", plugin->api_version,
+                 MC_EDITOR_PLUGIN_API_VERSION);
+        return FALSE;
+    }
+
+    if (plugin->name == NULL || plugin->open == NULL || plugin->close == NULL)
+    {
+        fprintf (stderr, "Editor plugin \"%s\": missing required callbacks\n",
+                 plugin->name != NULL ? plugin->name : "(null)");
+        return FALSE;
+    }
+
+    if (mc_editor_plugin_find_by_name (plugin->name) != NULL)
+    {
+        fprintf (stderr, "Editor plugin \"%s\": already registered\n", plugin->name);
+        return FALSE;
+    }
+
+    editor_plugin_registry = g_slist_append (editor_plugin_registry, (gpointer) plugin);
+    return TRUE;
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+const GSList *
+mc_editor_plugin_list (void)
+{
+    return editor_plugin_registry;
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+const mc_editor_plugin_t *
+mc_editor_plugin_find_by_name (const char *name)
+{
+    const GSList *iter;
+
+    if (name == NULL)
+        return NULL;
+
+    for (iter = editor_plugin_registry; iter != NULL; iter = g_slist_next (iter))
+    {
+        const mc_editor_plugin_t *p = (const mc_editor_plugin_t *) iter->data;
+
+        if (strcmp (p->name, name) == 0)
+            return p;
+    }
+
+    return NULL;
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+void
+mc_editor_plugins_shutdown (void)
+{
+    g_slist_free (editor_plugin_registry);
+    editor_plugin_registry = NULL;
 }
 
 /* --------------------------------------------------------------------------------------------- */

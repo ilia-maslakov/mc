@@ -314,6 +314,7 @@ enum
     CK_ShowTabTws,
     CK_SyntaxOnOff,
     CK_SyntaxChoose,
+    CK_EditPluginsInfo,
     CK_InsertLiteral,
     CK_ExternalCommand,
     CK_Date,
