@@ -103,10 +103,10 @@ edit_collect_completions_get_current_word (edit_search_status_msg_t *esm, mc_sea
  */
 
 static void
-edit_collect_completion_from_one_buffer (gboolean active_buffer, GQueue **compl, mc_search_t *srch,
-                                         edit_search_status_msg_t *esm, off_t word_start,
-                                         gsize word_len, off_t last_byte, GString *current_word,
-                                         int *max_width)
+edit_collect_completion_from_one_buffer (gboolean active_buffer, GQueue **completions,
+                                         mc_search_t *srch, edit_search_status_msg_t *esm,
+                                         off_t word_start, gsize word_len, off_t last_byte,
+                                         GString *current_word, int *max_width)
 {
     GString *temp = NULL;
     gsize len = 0;
@@ -146,13 +146,13 @@ edit_collect_completion_from_one_buffer (gboolean active_buffer, GQueue **compl,
         if (current_word != NULL && g_string_equal (current_word, temp))
             continue;
 
-        if (*compl == NULL)
-            *compl = g_queue_new ();
+        if (*completions == NULL)
+            *completions = g_queue_new ();
         else
         {
             GList *l;
 
-            for (l = g_queue_peek_head_link (*compl); l != NULL; l = g_list_next (l))
+            for (l = g_queue_peek_head_link (*completions); l != NULL; l = g_list_next (l))
             {
                 GString *s = (GString *) l->data;
 
@@ -166,11 +166,11 @@ edit_collect_completion_from_one_buffer (gboolean active_buffer, GQueue **compl,
             {
                 /* resort completion in main buffer only:
                  * these completions must be at the top of list in the completion dialog */
-                if (!active_buffer && l != g_queue_peek_tail_link (*compl))
+                if (!active_buffer && l != g_queue_peek_tail_link (*completions))
                 {
                     // move to the end
-                    g_queue_unlink (*compl, l);
-                    g_queue_push_tail_link (*compl, l);
+                    g_queue_unlink (*completions, l);
+                    g_queue_push_tail_link (*completions, l);
                 }
 
                 continue;
@@ -191,9 +191,9 @@ edit_collect_completion_from_one_buffer (gboolean active_buffer, GQueue **compl,
         }
 
         if (active_buffer)
-            g_queue_push_tail (*compl, temp);
+            g_queue_push_tail (*completions, temp);
         else
-            g_queue_push_head (*compl, temp);
+            g_queue_push_head (*completions, temp);
 
         start += len;
 
@@ -217,7 +217,7 @@ static GQueue *
 edit_collect_completions (WEdit *edit, off_t word_start, gsize word_len, const char *match_expr,
                           int *max_width)
 {
-    GQueue *compl = NULL;
+    GQueue *completions = NULL;
     mc_search_t *srch;
     off_t last_byte;
     GString *current_word;
@@ -250,7 +250,7 @@ edit_collect_completions (WEdit *edit, off_t word_start, gsize word_len, const c
     *max_width = 0;
 
     // collect completions from current buffer at first
-    edit_collect_completion_from_one_buffer (TRUE, &compl, srch, &esm, word_start, word_len,
+    edit_collect_completion_from_one_buffer (TRUE, &completions, srch, &esm, word_start, word_len,
                                              last_byte, current_word, max_width);
 
     // collect completions from other buffers
@@ -285,7 +285,7 @@ edit_collect_completions (WEdit *edit, off_t word_start, gsize word_len, const c
             esm.edit = e;
             esm.offset = 0;
 
-            edit_collect_completion_from_one_buffer (FALSE, &compl, srch, &esm, word_start,
+            edit_collect_completion_from_one_buffer (FALSE, &completions, srch, &esm, word_start,
                                                      word_len, last_byte, current_word, max_width);
         }
 
@@ -297,7 +297,7 @@ edit_collect_completions (WEdit *edit, off_t word_start, gsize word_len, const c
     if (current_word != NULL)
         g_string_free (current_word, TRUE);
 
-    return compl;
+    return completions;
 }
 
 /* --------------------------------------------------------------------------------------------- */
@@ -339,7 +339,7 @@ edit_completion_string_free (gpointer data)
 
 /* Public function for unit tests */
 char *
-edit_completion_dialog_show (const WEdit *edit, GQueue *compl, int max_width)
+edit_completion_dialog_show (const WEdit *edit, GQueue *completions, int max_width)
 {
     const WRect *we = &CONST_WIDGET (edit)->rect;
     int start_x, start_y, offset;
@@ -351,7 +351,7 @@ edit_completion_dialog_show (const WEdit *edit, GQueue *compl, int max_width)
     GList *i;
 
     // calculate the dialog metrics
-    compl_dlg_h = g_queue_get_length (compl) + 2;
+    compl_dlg_h = g_queue_get_length (completions) + 2;
     compl_dlg_w = max_width + 4;
     start_x = we->x + edit->curs_col + edit->start_col + EDIT_TEXT_HORIZONTAL_OFFSET
         + (edit->fullscreen != 0 ? 0 : 1) + edit_options.line_state_width;
@@ -382,7 +382,7 @@ edit_completion_dialog_show (const WEdit *edit, GQueue *compl, int max_width)
     compl_list = listbox_new (1, 1, compl_dlg_h - 2, compl_dlg_w - 2, FALSE, NULL);
 
     // fill the listbox with the completions in the reverse order
-    for (i = g_queue_peek_tail_link (compl); i != NULL; i = g_list_previous (i))
+    for (i = g_queue_peek_tail_link (completions); i != NULL; i = g_list_previous (i))
         listbox_add_item (compl_list, LISTBOX_APPEND_AT_END, 0, ((GString *) i->data)->str, NULL,
                           FALSE);
 
@@ -415,7 +415,7 @@ edit_complete_word_cmd (WEdit *edit)
     gsize word_len = 0;
     GString *match_expr;
     gsize i;
-    GQueue *compl;  // completions: list of GString*
+    GQueue *completions;  // completions: list of GString*
     int max_width;
 
     // search start of word to be completed
@@ -432,20 +432,21 @@ edit_complete_word_cmd (WEdit *edit)
         "[^\\s\\.=\\+\\[\\]\\(\\)\\,\\;\\:\\\"\\'\\-\\?\\/\\|\\\\\\{\\}\\*\\&\\^\\%%\\$#@\\!]+");
 
     // collect possible completions
-    compl = edit_collect_completions (edit, word_start, word_len, match_expr->str, &max_width);
+    completions =
+        edit_collect_completions (edit, word_start, word_len, match_expr->str, &max_width);
 
     g_string_free (match_expr, TRUE);
 
-    if (compl == NULL)
+    if (completions == NULL)
         return;
 
-    if (g_queue_get_length (compl) == 1)
+    if (g_queue_get_length (completions) == 1)
     {
         // insert completed word if there is only one match
 
         GString *curr_compl;
 
-        curr_compl = (GString *) g_queue_peek_head (compl);
+        curr_compl = (GString *) g_queue_peek_head (completions);
         edit_complete_word_insert_recoded_completion (edit, curr_compl->str, word_len);
     }
     else
@@ -455,7 +456,7 @@ edit_complete_word_cmd (WEdit *edit)
         char *curr_compl;
 
         // let the user select the preferred completion
-        curr_compl = edit_completion_dialog_show (edit, compl, max_width);
+        curr_compl = edit_completion_dialog_show (edit, completions, max_width);
         if (curr_compl != NULL)
         {
             edit_complete_word_insert_recoded_completion (edit, curr_compl, word_len);
@@ -463,7 +464,7 @@ edit_complete_word_cmd (WEdit *edit)
         }
     }
 
-    g_queue_free_full (compl, edit_completion_string_free);
+    g_queue_free_full (completions, edit_completion_string_free);
 }
 
 /* --------------------------------------------------------------------------------------------- */

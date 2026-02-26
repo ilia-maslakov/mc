@@ -286,7 +286,7 @@ mail_plugin_activate (void *plugin_data, void *edit)
     edit_mail_dialog ((WEdit *) edit);
 
     if (data != NULL && data->host != NULL && data->host->refresh != NULL)
-        data->host->refresh (data->host);
+        (data->host->refresh) (data->host);
 
     return MC_EPR_OK;
 }
@@ -306,7 +306,7 @@ scripts_plugin_handle_action (void *plugin_data, long command, void *edit)
     edit_block_process_cmd ((WEdit *) edit, macro_number);
 
     if (data != NULL && data->host != NULL && data->host->refresh != NULL)
-        data->host->refresh (data->host);
+        (data->host->refresh) (data->host);
 
     return MC_EPR_OK;
 }
@@ -324,7 +324,7 @@ etags_plugin_handle_action (void *plugin_data, long command, void *edit)
     edit_get_match_keyword_cmd ((WEdit *) edit);
 
     if (data != NULL && data->host != NULL && data->host->refresh != NULL)
-        data->host->refresh (data->host);
+        (data->host->refresh) (data->host);
 
     return MC_EPR_OK;
 }
@@ -342,7 +342,7 @@ spell_plugin_activate (void *plugin_data, void *edit)
     edit_spellcheck_file ((WEdit *) edit);
 
     if (data != NULL && data->host != NULL && data->host->refresh != NULL)
-        data->host->refresh (data->host);
+        (data->host->refresh) (data->host);
 
     return MC_EPR_OK;
 }
@@ -358,7 +358,7 @@ spell_plugin_configure (void *plugin_data, void *edit)
     edit_spell_plugin_settings ();
 
     if (data != NULL && data->host != NULL && data->host->refresh != NULL)
-        data->host->refresh (data->host);
+        (data->host->refresh) (data->host);
 
     return MC_EPR_OK;
 }
@@ -404,7 +404,7 @@ spell_plugin_handle_action (void *plugin_data, long command, void *edit)
     }
 
     if (data != NULL && data->host != NULL && data->host->refresh != NULL)
-        data->host->refresh (data->host);
+        (data->host->refresh) (data->host);
 
     return MC_EPR_OK;
 }
@@ -460,7 +460,7 @@ spell_plugin_handle_key (void *plugin_data, int key, void *edit)
     spell_plugin_debug_log ("spell: key command handled command=%ld", command);
 
     if (data != NULL && data->host != NULL && data->host->refresh != NULL)
-        data->host->refresh (data->host);
+        (data->host->refresh) (data->host);
 
     return MC_EPR_OK;
 }
