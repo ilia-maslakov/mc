@@ -67,7 +67,6 @@
 #include "editsearch.h"
 #include "editcomplete.h"  // edit_complete_word_cmd()
 #include "editmacros.h"
-#include "etags.h"  // edit_get_match_keyword_cmd()
 #ifdef HAVE_ASPELL
 #include "spell.h"
 #endif
@@ -4261,10 +4260,6 @@ edit_execute_cmd (WEdit *edit, long command, int char_for_insertion)
         else
             edit_complete_word_cmd (edit);
         break;
-    case CK_Find:
-        edit_get_match_keyword_cmd (edit);
-        break;
-
 #ifdef HAVE_ASPELL
     case CK_SpellCheckCurrentWord:
         edit_suggest_current_word (edit);
@@ -4333,9 +4328,7 @@ edit_execute_cmd (WEdit *edit, long command, int char_for_insertion)
         break;
     }
 
-    // CK_PipeBlock
-    if ((command / CK_PipeBlock (0)) == 1)
-        edit_block_process_cmd (edit, command - CK_PipeBlock (0));
+    (void) edit_plugin_handle_action (DIALOG (WIDGET (edit)->owner), command, edit);
 
     // keys which must set the col position, and the search vars
     switch (command)

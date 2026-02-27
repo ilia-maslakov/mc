@@ -98,6 +98,9 @@ static struct str_class used_class;
 static int
 str_test_not_convert (const char *enc)
 {
+    if (enc == NULL || codeset == NULL)
+        return 0;
+
     return g_ascii_strcasecmp (enc, codeset) == 0;
 }
 

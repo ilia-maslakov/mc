@@ -172,6 +172,9 @@ void edit_mark_current_word_cmd (WEdit *edit);
 void edit_mark_current_line_cmd (WEdit *edit);
 void edit_set_markers (WEdit *edit, off_t m1, off_t m2, long c1, long c2);
 void edit_push_markers (WEdit *edit);
+gboolean edit_plugin_handle_action (WDialog *h, long command, WEdit *edit);
+gboolean edit_plugin_configure (WDialog *h, long command, WEdit *edit);
+gboolean edit_plugin_handle_key (WDialog *h, int key, WEdit *edit);
 
 gboolean edit_save_block (WEdit *edit, const char *filename, off_t start, off_t finish);
 gboolean edit_save_block_cmd (WEdit *edit);
@@ -181,6 +184,7 @@ off_t edit_insert_file (WEdit *edit, const vfs_path_t *filename_vpath);
 gboolean edit_load_back_cmd (WEdit *edit);
 gboolean edit_load_forward_cmd (WEdit *edit);
 void edit_block_process_cmd (WEdit *edit, int macro_number);
+void edit_register_builtin_plugins (void);
 void edit_refresh_cmd (void);
 void edit_syntax_onoff_cmd (WDialog *h);
 void edit_show_tabs_tws_cmd (WDialog *h);

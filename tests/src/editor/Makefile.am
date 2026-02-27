@@ -20,6 +20,7 @@ TESTS = \
 	edit_complete_word_cmd \
 	edit_fold \
 	edit_insert_column_of_text \
+	edit_plugin_etags \
 	edit_replace_cmd
 
 check_PROGRAMS = $(TESTS)
@@ -33,6 +34,8 @@ edit_fold_SOURCES = \
 edit_insert_column_of_text_SOURCES = \
 	edit_insert_column_of_text.c
 
+edit_plugin_etags_SOURCES = \
+	edit_plugin_etags.c
+
 edit_replace_cmd_SOURCES = \
 	edit_replace_cmd.c
-

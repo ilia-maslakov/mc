@@ -43,7 +43,7 @@
 typedef struct
 {
     mc_panel_host_t *host;
-    gboolean in_subdir; /* TRUE when user entered "subdir" */
+    gboolean in_subdir;  /* TRUE when user entered "subdir" */
     GHashTable *deleted; /* set of "deleted" filenames */
 } hello_data_t;
 

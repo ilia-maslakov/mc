@@ -1132,8 +1132,7 @@ midnight_execute_cmd (Widget *sender, long command)
 #ifdef USE_DIFF_VIEW
         case CK_CompareFiles:
 #endif
-            message (D_ERROR, MSG_ERROR,
-                     _ ("This operation is not supported for plugin panels"));
+            message (D_ERROR, MSG_ERROR, _ ("This operation is not supported for plugin panels"));
             return MSG_HANDLED;
         default:
             break;

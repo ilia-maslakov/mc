@@ -3102,7 +3102,7 @@ do_enter (WPanel *panel)
         }
 
         g_free (focus_name);
-        return TRUE; // consume the key even if plugin didn't handle it
+        return TRUE;  // consume the key even if plugin didn't handle it
     }
 
     return do_enter_on_file_entry (panel, fe);
@@ -3960,7 +3960,8 @@ panel_plugin_reload (WPanel *panel)
 
     {
         const file_entry_t *fe = panel_current_entry (panel);
-        if (fe != NULL && fe->fname != NULL && fe->fname->str != NULL && strcmp (fe->fname->str, "..") == 0)
+        if (fe != NULL && fe->fname != NULL && fe->fname->str != NULL
+            && strcmp (fe->fname->str, "..") == 0)
             was_dotdot = TRUE;
     }
 

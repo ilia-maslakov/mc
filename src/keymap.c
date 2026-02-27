@@ -511,9 +511,6 @@ static const global_keymap_ini_t default_editor_keymap[] = {
     { "ExternalCommand", "alt-u" },
     { "FoldToggle", "alt-shift-f" },
     { "UnfoldAll", "alt-shift-u" },
-#ifdef HAVE_ASPELL
-    { "SpellCheckCurrentWord", "ctrl-p" },
-#endif
     { "ExtendedKeyMap", "ctrl-x" },
     {
         NULL,

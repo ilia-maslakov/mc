@@ -102,6 +102,9 @@ incomplete, use `configure --help' to get the full list):
      This option adds spell check support to the internal editor using
      libaspell and optionally sets path to libaspell installation prefix
      [default=/usr]. Disabled by default.
+     When enabled, spell-check commands are handled by the built-in
+     editor plugin named `spell'.
+     The spell plugin settings dialog allows selecting the language.
 
 `--without-gpm-mouse'
      Use this flag to disable gpm mouse support (e.g. if you want to
@@ -199,6 +202,18 @@ VFS options:
      to be added without recompiling MC.  GModule (part of GLib) is
      required for this feature; if unavailable, dynamic loading is
      silently skipped.
+
+`--with-panel-plugins-dir=DIR'
+     Set the directory where Midnight Commander looks for dynamic panel
+     plugins at runtime [default=LIBDIR/mc/panel-plugins].  A dynamic
+     panel plugin is a shared object (.so) that exports the
+     mc_panel_plugin_register symbol.
+
+`--with-editor-plugins-dir=DIR'
+     Set the directory where Midnight Commander looks for dynamic editor
+     plugins at runtime [default=LIBDIR/mc/editor-plugins].  A dynamic
+     editor plugin is a shared object (.so) that exports the
+     mc_editor_plugin_register symbol.
 
 
 Screen library:

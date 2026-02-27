@@ -65,7 +65,13 @@
 #include "edit-impl.h"
 #include "editwidget.h"
 #include "editsearch.h"
-#include "etags.h"
+#include "src/editor-plugins/builtin-plugins.h"
+
+/*
+ * Temporary wiring: compile builtin editor plugins implementation from its own
+ * source tree without changing autotools files in this step.
+ */
+#include "src/editor-plugins/builtin-plugins.c"
 
 /*** global variables ****************************************************************************/
 
@@ -111,6 +117,14 @@ edit_save_mode_callback (Widget *w, Widget *sender, widget_msg_t msg, int parm, 
     default:
         return dlg_default_callback (w, sender, msg, parm, data);
     }
+}
+
+/* --------------------------------------------------------------------------------------------- */
+
+void
+edit_register_builtin_plugins (void)
+{
+    editor_plugins_register_all ();
 }
 
 /* --------------------------------------------------------------------------------------------- */

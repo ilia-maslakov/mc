@@ -285,7 +285,8 @@ save_connections (const char *filepath, GPtrArray *connections)
             (const sftp_connection_t *) g_ptr_array_index (connections, i);
 
         g_key_file_set_string (kf, conn->label, "host", conn->host);
-        g_key_file_set_integer (kf, conn->label, "port", conn->port > 0 ? conn->port : SFTP_DEFAULT_PORT);
+        g_key_file_set_integer (kf, conn->label, "port",
+                                conn->port > 0 ? conn->port : SFTP_DEFAULT_PORT);
 
         if (conn->user != NULL)
             g_key_file_set_string (kf, conn->label, "user", conn->user);
@@ -539,11 +540,13 @@ sftp_connect (sftp_data_t *data, sftp_connection_t *conn)
         && sftp_auth_has_method (auth_list, "publickey"))
     {
         if (libssh2_userauth_publickey_fromfile (data->session, user, conn->pubkey, conn->privkey,
-                                                 conn->password) == 0)
+                                                 conn->password)
+            == 0)
             goto auth_ok;
     }
 
-    if (conn->password != NULL && conn->password[0] != '\0' && sftp_auth_has_method (auth_list, "password"))
+    if (conn->password != NULL && conn->password[0] != '\0'
+        && sftp_auth_has_method (auth_list, "password"))
     {
         if (libssh2_userauth_password (data->session, user, conn->password) == 0)
             goto auth_ok;
@@ -908,7 +911,8 @@ sftp_get_items (void *plugin_data, void *list_ptr)
                 mode = S_IFREG | 0644;
 
             size = S_ISDIR (mode) ? 0 : e->st.st_size;
-            add_entry (list, e->name, mode, size, e->st.st_mtime != 0 ? e->st.st_mtime : time (NULL));
+            add_entry (list, e->name, mode, size,
+                       e->st.st_mtime != 0 ? e->st.st_mtime : time (NULL));
         }
     }
 
@@ -1143,7 +1147,8 @@ sftp_delete_items (void *plugin_data, const char **names, int count)
         remote_path = sftp_join_path (data->current_path, names[i]);
 
         if (entry->is_dir)
-            rc = libssh2_sftp_rmdir_ex (data->sftp_session, remote_path, (unsigned int) strlen (remote_path));
+            rc = libssh2_sftp_rmdir_ex (data->sftp_session, remote_path,
+                                        (unsigned int) strlen (remote_path));
         else
             rc = libssh2_sftp_unlink_ex (data->sftp_session, remote_path,
                                          (unsigned int) strlen (remote_path));

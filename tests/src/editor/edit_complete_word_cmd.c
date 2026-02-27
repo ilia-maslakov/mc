@@ -96,7 +96,7 @@ static char *edit_completion_dialog_show__return_value;
 
 /* @Mock */
 char *
-edit_completion_dialog_show (const WEdit *edit, GQueue *compl, int max_width)
+edit_completion_dialog_show (const WEdit *edit, GQueue *completions, int max_width)
 {
 
     edit_completion_dialog_show__edit = edit;
@@ -107,7 +107,7 @@ edit_completion_dialog_show (const WEdit *edit, GQueue *compl, int max_width)
 
         edit_completion_dialog_show__compl = g_queue_new ();
 
-        for (i = g_queue_peek_tail_link (compl); i != NULL; i = g_list_previous (i))
+        for (i = g_queue_peek_tail_link (completions); i != NULL; i = g_list_previous (i))
         {
             GString *s = (GString *) i->data;
 

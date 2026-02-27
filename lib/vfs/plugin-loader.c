@@ -51,6 +51,16 @@ static GPtrArray *dynamic_modules = NULL;
 /*** file scope functions ************************************************************************/
 /* --------------------------------------------------------------------------------------------- */
 
+static gboolean
+module_filename_has_native_suffix (const gchar *filename)
+{
+    if (filename == NULL)
+        return FALSE;
+
+    return g_str_has_suffix (filename, ".so") || g_str_has_suffix (filename, ".dylib")
+        || g_str_has_suffix (filename, ".bundle") || g_str_has_suffix (filename, ".dll");
+}
+
 /* --------------------------------------------------------------------------------------------- */
 /*** public functions ****************************************************************************/
 /* --------------------------------------------------------------------------------------------- */
@@ -78,7 +88,7 @@ vfs_plugins_load_dynamic (void)
         mc_vfs_plugin_init_fn init_fn;
         gchar *path;
 
-        if (!g_str_has_suffix (filename, "." G_MODULE_SUFFIX))
+        if (!module_filename_has_native_suffix (filename))
             continue;
 
         path = g_build_filename (plugins_dir, filename, (char *) NULL);
@@ -92,8 +102,7 @@ vfs_plugins_load_dynamic (void)
 
         if (!g_module_symbol (module, MC_VFS_PLUGIN_ENTRY, (gpointer *) &init_fn))
         {
-            fprintf (stderr, "VFS plugin %s: symbol %s not found\n",
-                     filename, MC_VFS_PLUGIN_ENTRY);
+            fprintf (stderr, "VFS plugin %s: symbol %s not found\n", filename, MC_VFS_PLUGIN_ENTRY);
             g_module_close (module);
             g_free (path);
             continue;

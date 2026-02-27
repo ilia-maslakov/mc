@@ -151,7 +151,7 @@ do_view_cmd (WPanel *panel, gboolean plain_view)
     {
         if (panel->plugin->get_local_copy == NULL)
         {
-            message (D_ERROR, MSG_ERROR, _("This plugin does not support file viewing"));
+            message (D_ERROR, MSG_ERROR, _ ("This plugin does not support file viewing"));
             return;
         }
 
@@ -162,7 +162,7 @@ do_view_cmd (WPanel *panel, gboolean plain_view)
             r = panel->plugin->get_local_copy (panel->plugin_data, fe->fname->str, &local_path);
             if (r != MC_PPR_OK || local_path == NULL)
             {
-                message (D_ERROR, MSG_ERROR, _("Cannot get local copy of %s"), fe->fname->str);
+                message (D_ERROR, MSG_ERROR, _ ("Cannot get local copy of %s"), fe->fname->str);
                 return;
             }
 
@@ -717,7 +717,7 @@ edit_cmd (const WPanel *panel)
     {
         if (panel->plugin->get_local_copy == NULL)
         {
-            message (D_ERROR, MSG_ERROR, _("This plugin does not support file editing"));
+            message (D_ERROR, MSG_ERROR, _ ("This plugin does not support file editing"));
             return;
         }
 
@@ -728,7 +728,7 @@ edit_cmd (const WPanel *panel)
             r = panel->plugin->get_local_copy (panel->plugin_data, fe->fname->str, &local_path);
             if (r != MC_PPR_OK || local_path == NULL)
             {
-                message (D_ERROR, MSG_ERROR, _("Cannot get local copy of %s"), fe->fname->str);
+                message (D_ERROR, MSG_ERROR, _ ("Cannot get local copy of %s"), fe->fname->str);
                 return;
             }
 
@@ -769,7 +769,7 @@ edit_cmd_force_internal (const WPanel *panel)
     {
         if (panel->plugin->get_local_copy == NULL)
         {
-            message (D_ERROR, MSG_ERROR, _("This plugin does not support file editing"));
+            message (D_ERROR, MSG_ERROR, _ ("This plugin does not support file editing"));
             return;
         }
 
@@ -780,7 +780,7 @@ edit_cmd_force_internal (const WPanel *panel)
             r = panel->plugin->get_local_copy (panel->plugin_data, fe->fname->str, &local_path);
             if (r != MC_PPR_OK || local_path == NULL)
             {
-                message (D_ERROR, MSG_ERROR, _("Cannot get local copy of %s"), fe->fname->str);
+                message (D_ERROR, MSG_ERROR, _ ("Cannot get local copy of %s"), fe->fname->str);
                 return;
             }
 
@@ -1579,7 +1579,7 @@ copy_local_file (const char *src, const char *dest)
     if (nread == -1)
         ok = FALSE;
 
-  done:
+done:
     close (fd_src);
     close (fd_dest);
     return ok;
@@ -1638,14 +1638,13 @@ plugin_panel_copy_cmd (WPanel *panel)
 
     if (panel->plugin->get_local_copy == NULL)
     {
-        message (D_ERROR, MSG_ERROR, _("This plugin does not support copying files"));
+        message (D_ERROR, MSG_ERROR, _ ("This plugin does not support copying files"));
         return;
     }
 
     default_dest = vfs_path_as_str (other_panel->cwd_vpath);
-    dest_dir =
-        input_expand_dialog (_("Copy"), _("Copy to:"), MC_HISTORY_FM_PLUGIN_COPY, default_dest,
-                             INPUT_COMPLETE_FILENAMES | INPUT_COMPLETE_CD);
+    dest_dir = input_expand_dialog (_ ("Copy"), _ ("Copy to:"), MC_HISTORY_FM_PLUGIN_COPY,
+                                    default_dest, INPUT_COMPLETE_FILENAMES | INPUT_COMPLETE_CD);
     if (dest_dir == NULL || dest_dir[0] == '\0')
     {
         g_free (dest_dir);
@@ -1664,14 +1663,14 @@ plugin_panel_copy_cmd (WPanel *panel)
         r = panel->plugin->get_local_copy (panel->plugin_data, name, &local_path);
         if (r != MC_PPR_OK || local_path == NULL)
         {
-            message (D_ERROR, MSG_ERROR, _("Cannot get local copy of %s"), name);
+            message (D_ERROR, MSG_ERROR, _ ("Cannot get local copy of %s"), name);
             continue;
         }
 
         dest_path = mc_build_filename (dest_dir, name, (char *) NULL);
 
         if (!copy_local_file (local_path, dest_path))
-            message (D_ERROR, MSG_ERROR, _("Cannot copy %s"), name);
+            message (D_ERROR, MSG_ERROR, _ ("Cannot copy %s"), name);
 
         unlink (local_path);
         g_free (local_path);
@@ -1696,7 +1695,7 @@ plugin_panel_delete_cmd (WPanel *panel)
 
     if (panel->plugin->delete_items == NULL)
     {
-        message (D_ERROR, MSG_ERROR, _("This plugin does not support deleting files"));
+        message (D_ERROR, MSG_ERROR, _ ("This plugin does not support deleting files"));
         return;
     }
 
@@ -1714,13 +1713,11 @@ plugin_panel_delete_cmd (WPanel *panel)
         int result;
 
         if (names->len == 1)
-            result = query_dialog (_("Delete"),
-                                   _("Delete file from plugin panel?"),
-                                   D_ERROR, 2, _("&Yes"), _("&No"));
+            result = query_dialog (_ ("Delete"), _ ("Delete file from plugin panel?"), D_ERROR, 2,
+                                   _ ("&Yes"), _ ("&No"));
         else
-            result = query_dialog (_("Delete"),
-                                   _("Delete tagged files from plugin panel?"),
-                                   D_ERROR, 2, _("&Yes"), _("&No"));
+            result = query_dialog (_ ("Delete"), _ ("Delete tagged files from plugin panel?"),
+                                   D_ERROR, 2, _ ("&Yes"), _ ("&No"));
 
         if (result != 0)
         {
@@ -1729,10 +1726,10 @@ plugin_panel_delete_cmd (WPanel *panel)
         }
     }
 
-    r = panel->plugin->delete_items (panel->plugin_data,
-                                     (const char **) names->pdata, (int) names->len);
+    r = panel->plugin->delete_items (panel->plugin_data, (const char **) names->pdata,
+                                     (int) names->len);
     if (r != MC_PPR_OK)
-        message (D_ERROR, MSG_ERROR, _("Delete failed"));
+        message (D_ERROR, MSG_ERROR, _ ("Delete failed"));
 
     g_ptr_array_free (names, TRUE);
     update_panels (UP_OPTIMIZE, UP_KEEPSEL);
@@ -1748,10 +1745,9 @@ plugin_panel_create_cmd (WPanel *panel)
     if (panel->plugin == NULL || panel->plugin_data == NULL)
         return;
 
-    if (panel->plugin->create_item == NULL
-        || (panel->plugin->flags & MC_PPF_CREATE) == 0)
+    if (panel->plugin->create_item == NULL || (panel->plugin->flags & MC_PPF_CREATE) == 0)
     {
-        message (D_ERROR, MSG_ERROR, _("This plugin does not support creating items"));
+        message (D_ERROR, MSG_ERROR, _ ("This plugin does not support creating items"));
         return;
     }
 
@@ -1776,14 +1772,13 @@ plugin_panel_move_cmd (WPanel *panel)
 
     if (panel->plugin->get_local_copy == NULL || panel->plugin->delete_items == NULL)
     {
-        message (D_ERROR, MSG_ERROR, _("This plugin does not support moving files"));
+        message (D_ERROR, MSG_ERROR, _ ("This plugin does not support moving files"));
         return;
     }
 
     default_dest = vfs_path_as_str (other_panel->cwd_vpath);
-    dest_dir =
-        input_expand_dialog (_("Move"), _("Move to:"), MC_HISTORY_FM_PLUGIN_MOVE, default_dest,
-                             INPUT_COMPLETE_FILENAMES | INPUT_COMPLETE_CD);
+    dest_dir = input_expand_dialog (_ ("Move"), _ ("Move to:"), MC_HISTORY_FM_PLUGIN_MOVE,
+                                    default_dest, INPUT_COMPLETE_FILENAMES | INPUT_COMPLETE_CD);
     if (dest_dir == NULL || dest_dir[0] == '\0')
     {
         g_free (dest_dir);
@@ -1803,7 +1798,7 @@ plugin_panel_move_cmd (WPanel *panel)
         r = panel->plugin->get_local_copy (panel->plugin_data, name, &local_path);
         if (r != MC_PPR_OK || local_path == NULL)
         {
-            message (D_ERROR, MSG_ERROR, _("Cannot get local copy of %s"), name);
+            message (D_ERROR, MSG_ERROR, _ ("Cannot get local copy of %s"), name);
             continue;
         }
 
@@ -1811,7 +1806,7 @@ plugin_panel_move_cmd (WPanel *panel)
 
         if (!copy_local_file (local_path, dest_path))
         {
-            message (D_ERROR, MSG_ERROR, _("Cannot copy %s"), name);
+            message (D_ERROR, MSG_ERROR, _ ("Cannot copy %s"), name);
             unlink (local_path);
             g_free (local_path);
             g_free (dest_path);
@@ -1829,11 +1824,10 @@ plugin_panel_move_cmd (WPanel *panel)
     {
         mc_pp_result_t r;
 
-        r = panel->plugin->delete_items (panel->plugin_data,
-                                         (const char **) moved_names->pdata,
+        r = panel->plugin->delete_items (panel->plugin_data, (const char **) moved_names->pdata,
                                          (int) moved_names->len);
         if (r != MC_PPR_OK)
-            message (D_ERROR, MSG_ERROR, _("Move succeeded but delete from plugin failed"));
+            message (D_ERROR, MSG_ERROR, _ ("Move succeeded but delete from plugin failed"));
     }
 
     g_ptr_array_free (names, TRUE);

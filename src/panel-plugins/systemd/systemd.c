@@ -53,9 +53,9 @@ typedef struct
 typedef struct
 {
     mc_panel_host_t *host;
-    char *current_type;         /* NULL = root, "services" = inside type dir */
-    GPtrArray *units;           /* array of systemd_unit_t* */
-    char *title_buf;            /* owned buffer for get_title() return */
+    char *current_type; /* NULL = root, "services" = inside type dir */
+    GPtrArray *units;   /* array of systemd_unit_t* */
+    char *title_buf;    /* owned buffer for get_title() return */
 } systemd_data_t;
 
 /*** file scope variables ************************************************************************/
@@ -65,15 +65,9 @@ static const struct
     const char *dir_name;
     const char *type_arg;
 } unit_type_dirs[] = {
-    { "services", "service" },
-    { "timers", "timer" },
-    { "sockets", "socket" },
-    { "targets", "target" },
-    { "mounts", "mount" },
-    { "slices", "slice" },
-    { "paths", "path" },
-    { "scopes", "scope" },
-    { "automounts", "automount" },
+    { "services", "service" }, { "timers", "timer" }, { "sockets", "socket" },
+    { "targets", "target" },   { "mounts", "mount" }, { "slices", "slice" },
+    { "paths", "path" },       { "scopes", "scope" }, { "automounts", "automount" },
     { "swaps", "swap" },
 };
 
@@ -459,8 +453,7 @@ systemd_get_items (void *plugin_data, void *list_ptr)
                     (const systemd_unit_t *) g_ptr_array_index (data->units, i);
                 char *display_name;
 
-                display_name =
-                    g_strdup_printf ("%s%s", state_to_prefix (u->state), u->name);
+                display_name = g_strdup_printf ("%s%s", state_to_prefix (u->state), u->name);
                 add_entry (list, display_name, state_to_mode (u->state), 0);
                 g_free (display_name);
             }
@@ -528,7 +521,7 @@ systemd_enter (void *plugin_data, const char *name, const struct stat *st)
     (void) st;
 
     if (data->current_type == NULL)
-        return MC_PPR_NOT_SUPPORTED;   /* directories handled by chdir */
+        return MC_PPR_NOT_SUPPORTED; /* directories handled by chdir */
 
     u = find_unit (data, name);
     if (u == NULL)

@@ -77,7 +77,8 @@ static void docker_close (void *plugin_data);
 static mc_pp_result_t docker_get_items (void *plugin_data, void *list_ptr);
 static mc_pp_result_t docker_chdir (void *plugin_data, const char *path);
 static mc_pp_result_t docker_enter (void *plugin_data, const char *name, const struct stat *st);
-static mc_pp_result_t docker_get_local_copy (void *plugin_data, const char *fname, char **local_path);
+static mc_pp_result_t docker_get_local_copy (void *plugin_data, const char *fname,
+                                             char **local_path);
 static mc_pp_result_t docker_delete_items (void *plugin_data, const char **names, int count);
 static const char *docker_get_title (void *plugin_data);
 static mc_pp_result_t docker_create_item (void *plugin_data);
@@ -291,7 +292,8 @@ run_cmd (const char *cmd, char **output, char **err_text)
 static gboolean
 is_ungrouped_project (const char *project)
 {
-    return (project == NULL || project[0] == '\0' || strcmp (project, docker_ungrouped_project) == 0);
+    return (project == NULL || project[0] == '\0'
+            || strcmp (project, docker_ungrouped_project) == 0);
 }
 
 /* --------------------------------------------------------------------------------------------- */
@@ -311,7 +313,8 @@ static gboolean
 docker_load_containers_output (char **output, char **err_text)
 {
     return run_cmd (
-        "docker ps -a --format '{{.ID}}\\t{{.Names}}\\t{{.Image}}\\t{{.Status}}\\t{{.Label \"com.docker.compose.project\"}}'",
+        "docker ps -a --format '{{.ID}}\\t{{.Names}}\\t{{.Image}}\\t{{.Status}}\\t{{.Label "
+        "\"com.docker.compose.project\"}}'",
         output, err_text);
 }
 
@@ -558,8 +561,8 @@ reload_items (docker_data_t *data)
         if (!docker_load_containers_output (&output, &err_text))
             goto cmd_failed;
 
-        data->items =
-            parse_container_items_from_project (output, data->current_project, data->current_container_id);
+        data->items = parse_container_items_from_project (output, data->current_project,
+                                                          data->current_container_id);
         break;
 
     case DOCKER_VIEW_CONTAINER_DETAILS:
@@ -579,8 +582,8 @@ reload_items (docker_data_t *data)
     }
 
     case DOCKER_VIEW_IMAGES:
-        if (!run_cmd ("docker images --format '{{.ID}}\\t{{.Repository}}:{{.Tag}}\\t{{.Size}}'", &output,
-                      &err_text))
+        if (!run_cmd ("docker images --format '{{.ID}}\\t{{.Repository}}:{{.Tag}}\\t{{.Size}}'",
+                      &output, &err_text))
             goto cmd_failed;
 
         data->items = parse_generic_list_output (data->view, output);
@@ -780,7 +783,8 @@ docker_get_items (void *plugin_data, void *list_ptr)
     {
         for (idx = 0; idx < data->items->len; idx++)
         {
-            const docker_item_t *item = (const docker_item_t *) g_ptr_array_index (data->items, idx);
+            const docker_item_t *item =
+                (const docker_item_t *) g_ptr_array_index (data->items, idx);
             mode_t mode = item->is_dir ? (S_IFDIR | 0755) : (S_IFREG | 0644);
 
             add_entry (list, item->name, mode, item->size);
@@ -1099,18 +1103,16 @@ docker_get_title (void *plugin_data)
         break;
 
     case DOCKER_VIEW_CONTAINERS_ITEMS:
-        data->title_buf = g_strdup_printf ("/containers/%s",
-                                           data->current_project != NULL ? data->current_project
-                                                                         : docker_ungrouped_project);
+        data->title_buf = g_strdup_printf (
+            "/containers/%s",
+            data->current_project != NULL ? data->current_project : docker_ungrouped_project);
         break;
 
     case DOCKER_VIEW_CONTAINER_DETAILS:
-        data->title_buf = g_strdup_printf ("/containers/%s/%s",
-                                           data->current_project != NULL ? data->current_project
-                                                                         : docker_ungrouped_project,
-                                           data->current_container_name != NULL
-                                               ? data->current_container_name
-                                               : "container");
+        data->title_buf = g_strdup_printf (
+            "/containers/%s/%s",
+            data->current_project != NULL ? data->current_project : docker_ungrouped_project,
+            data->current_container_name != NULL ? data->current_container_name : "container");
         break;
 
     case DOCKER_VIEW_IMAGES:
@@ -1191,8 +1193,8 @@ docker_create_item (void *plugin_data)
 
     if (q_project != NULL)
     {
-        char *tmp = g_strconcat (cmd, "--label com.docker.compose.project=", q_project, " ",
-                                 (char *) NULL);
+        char *tmp =
+            g_strconcat (cmd, "--label com.docker.compose.project=", q_project, " ", (char *) NULL);
         g_free (cmd);
         cmd = tmp;
     }

@@ -31,6 +31,7 @@
 
 /* --------------------------------------------------------------------------------------------- */
 
+/* clang-format off */
 #if defined(HAVE_STRUCT_STAT_ST_BLKSIZE) && defined(HAVE_STRUCT_STAT_ST_BLOCKS)
 #define STRUCT_STAT(size, blksize, blocks)                                                         \
     {                                                                                              \
@@ -56,6 +57,7 @@
         .st_size = size,                                                                           \
     }
 #endif
+/* clang-format on */
 
 /* @DataSource("test_test_vfs_adjust_stat_ds") */
 static const struct test_vfs_adjust_stat_ds
